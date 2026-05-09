@@ -1,6 +1,6 @@
-# Macro-Driven ETF Allocation, Timing & Position Management System (v0.2)
+# Systematic Macro Quant Investment Framework
 
-This repository converts the latest Excel/Google Sheets trading framework into a Python-ready project for backtesting, GitHub demonstration, Power BI visualization, and interview presentation.
+Institutional-style systematic macro and ETF investment research framework integrating regime analysis, allocation modeling, execution logic, staged exposure management, and risk analytics across macro, AI-chain, commodity, and risk-off environments.
 
 ## What changed in v0.2
 
