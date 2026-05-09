@@ -225,6 +225,21 @@ dashboard_export/
 powerbi/
 ```
 
+| Folder            | Corresponding Logic                      |
+| ----------------- | ---------------------------------------- |
+| macro/            | Macro Signals                            |
+| regime/           | Regime Classification                    |
+| trade_bias/       | Trade Bias                               |
+| structure/        | Structure Analysis                       |
+| allocation/       | Allocation                               |
+| execution/        | Execution                                |
+| risk_management/  | Risk Management                          |
+| analytics/        | Walk-forward / Monte Carlo / Sharpe / DD |
+| dashboard_export/ | Python → Power BI export                 |
+| powerbi/          | Institutional dashboard                  |
+| data/             | Historical data                          |
+| scripts/          | Utility / pipeline scripts               |
+
 Disclaimer
 
 This repository is for research, educational, and demonstration purposes only and does not constitute investment advice.
