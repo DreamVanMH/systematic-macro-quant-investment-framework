@@ -1,6 +1,6 @@
 # Systematic Macro Quant Investment Framework
 
-Institutional-style systematic macro and ETF investment research framework integrating:
+Institutional-style US equity-focused macro liquidity and ETF allocation research framework integrating:
 
 - Macro regime analysis
 - Cross-asset monitoring
@@ -16,7 +16,7 @@ Institutional-style systematic macro and ETF investment research framework integ
 
 # Project Overview
 
-This repository translates a multi-layered Excel and Google Sheets institutional-style investment framework into scalable Python-based research workflows for:
+The framework combines macro, liquidity, volatility, rates, commodity, AI-chain, and cross-asset monitoring systems into a unified US equity-focused allocation and execution engine.
 
 - Quantitative research
 - ETF allocation analysis
@@ -28,18 +28,20 @@ This repository translates a multi-layered Excel and Google Sheets institutional
 - AWS-based backtesting infrastructure
 
 The framework combines macro, cross-asset, volatility, commodity, AI-chain, and risk-off monitoring systems into a unified allocation and execution engine.
+The framework is primarily designed around US equity and growth-asset interpretation rather than traditional global macro forecasting. Macro signals are interpreted through liquidity, rates, USD flows, volatility, and growth leadership dynamics to support ETF allocation and execution decisions.
 
 ---
 
 # Core Investment Workflow
 
-Macro Signals  
-→ Regime Classification  
-→ Trade Bias  
-→ Structure Analysis  
-→ Allocation Engine  
-→ Execution Timing  
-→ Position Management  
+Macro Signals
+→ Liquidity Interpretation
+→ US Equity Regime Classification
+→ Trade Bias
+→ Structure Analysis
+→ Allocation Engine
+→ Execution Timing
+→ Position Management
 → Risk Analytics
 
 ---
@@ -108,7 +110,8 @@ Includes monitoring systems across:
 
 - Risk-on / Risk-off classification
 - Volatility monitoring
-- Yield and liquidity monitoring
+- Yield, liquidity, and USD-flow interpretation
+- US equity-centered macro liquidity framework
 - Inflation and commodity pressure analysis
 - Cross-asset confirmation workflows
 - Macro trade-bias generation
