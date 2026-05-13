@@ -1,14 +1,12 @@
-# Institutional Macro Quant Research Framework Architecture
+# Macro-Aware CTA Execution Framework Architecture
 
-This repository follows a layered institutional-style investment research workflow:
+This repository follows a layered macro-aware CTA execution workflow:
 
-Macro Signals
-→ Regime Classification
-→ Trade Bias
-→ Structure Analysis
-→ Allocation
-→ Execution
-→ Risk Management
+Macro Environment Filter
+→ Trend / Flow Selection
+→ Dashboard Relative Strength
+→ Pullback Continuation Entry
+→ Position & Risk Management
 → Analytics
 → Dashboard Visualization
 
@@ -27,81 +25,53 @@ Examples:
 - USD liquidity tracking
 - Treasury yield monitoring
 - Commodity inflation pressure
-- AI-chain macro leadership
+- Broad macro environment filtering
 
 ---
 
-## regime/
+## dashboard/
 
 Purpose:
-Market regime classification engine.
+Relative-strength monitoring and tradable structure visualization.
 
 Examples:
 
-- Risk-on
-- Risk-off
-- Inflationary pressure
-- Liquidity tightening
-- Defensive rotation
-
----
-
-## trade_bias/
-
-Purpose:
-Translate macro regime into directional portfolio bias.
-
-Examples:
-
-- Growth overweight
-- Hedge activation
-- Commodity preference
-- Defensive positioning
-
----
-
-## structure/
-
-Purpose:
-Technical and structural confirmation layer.
-
-Examples:
-
-- Breakout confirmation
-- Pullback scoring
-- Relative strength comparison
-- Cross-asset structure alignment
-- Support / resistance framework
+Growth vs Commodity comparison
+Strongest-asset monitoring
+Capital-restriction deployment logic
+Dashboard trade suggestions
+Breadth visualization
+Relative-strength structure monitoring
 
 ---
 
 ## allocation/
 
 Purpose:
-Portfolio allocation and capital distribution logic.
+Dashboard-based deployment preference and strongest-asset selection logic.
 
 Examples:
 
-- ETF weighting
-- Selected asset engine
-- Single-asset prioritization
+- Strongest-asset selection
+- Capital-restriction deployment logic
+- Dashboard-based allocation preference
 - Exposure scaling
-- Allocation rotation
 
 ---
 
 ## execution/
 
 Purpose:
-Trade execution workflow and position-state management.
+CTA-style trend-following execution and pullback continuation-entry workflows.
 
 Examples:
 
-- Entry engine
-- Add-position logic
-- Break-even protection
-- Trailing-profit management
-- Position-state transitions
+- Pullback continuation confirmation
+- Breakout vs pullback entry logic
+- Execution-condition scoring
+- Trend continuation monitoring
+- Add-position workflows
+- Entry-quality refinement
 
 ---
 
@@ -123,16 +93,16 @@ Examples:
 ## analytics/
 
 Purpose:
-Research analytics and robustness evaluation.
+Basic research analytics and execution evaluation.
 
 Examples:
 
 - Sharpe ratio
 - Maximum drawdown
 - Recovery factor
-- Walk-forward analysis
-- Monte Carlo testing
+- Trade logging
 - Risk-adjusted performance evaluation
+- Basic backtesting workflows
 
 ---
 
@@ -153,7 +123,7 @@ Examples:
 ## powerbi/
 
 Purpose:
-Institutional-style dashboard visualization and reporting.
+Dashboard visualization and reporting.
 
 Examples:
 
@@ -181,25 +151,23 @@ Examples:
 
 # Research Philosophy
 
-This framework is designed around institutional-style multi-layer investment decision workflows rather than single-indicator trading systems.
-
-Core philosophy:
-
-Macro
-→ Regime
-→ Bias
-→ Structure
-→ Allocation
-→ Execution
-→ Risk Management
-
 The framework prioritizes:
 
-- Cross-asset confirmation
-- Layered signal validation
-- Risk-adjusted positioning
-- Staged exposure management
-- Institutional-style portfolio thinking
+- tradable execution quality
+- trend continuation
+- staged exposure management
+- pullback refinement
+- risk-controlled deployment
+
+The framework focuses more on:
+
+- handling markets
+
+rather than:
+
+- fully explaining markets
+
+Macro signals are treated as broad environment filters rather than full-market prediction engines.
 
 ---
 

@@ -1,48 +1,44 @@
 # Systematic Macro Quant Investment Framework
 
-Institutional-style US equity-focused macro liquidity and ETF allocation research framework integrating:
+Macro-aware ETF trend-following and risk-management research framework focused on tradable signal
+generation, pullback-based execution refinement, staged position management, and dashboard visualization.
 
-- Macro regime analysis
-- Cross-asset monitoring
-- ETF allocation modeling
-- Execution logic
-- Pullback scoring
-- Position management
-- Staged exposure management
-- Risk analytics
-- Institutional-style research workflow
+Macro Environment Filter
+→ Trend / Flow Selection
+→ Dashboard Relative Strength
+→ Pullback Continuation Entry
+→ Position & Risk Management
+→ Analytics
+→ Dashboard Visualization
 
 ---
 
 # Project Overview
 
-The framework combines macro, liquidity, volatility, rates, commodity, AI-chain, and cross-asset monitoring systems into a unified US equity-focused allocation and execution engine.
+The framework focuses on tradable ETF trend-following, pullback refinement, and risk-management workflows using macro-aware market filters and dashboard-based relative-strength monitoring.
 
 - Quantitative research
 - ETF allocation analysis
-- Regime-based portfolio modeling
 - Execution timing analysis
 - Risk management
 - Performance analytics
 - Power BI visualization
-- AWS-based backtesting infrastructure
+- AWS-supported research infrastructure
 
-The framework combines macro, cross-asset, volatility, commodity, AI-chain, and risk-off monitoring systems into a unified allocation and execution engine.
+The framework combines macro-aware market filters, relative-strength monitoring, pullback refinement, and staged risk-management workflows into a tradable ETF execution framework.
 The framework is primarily designed around US equity and growth-asset interpretation rather than traditional global macro forecasting. Macro signals are interpreted through liquidity, rates, USD flows, volatility, and growth leadership dynamics to support ETF allocation and execution decisions.
 
 ---
 
 # Core Investment Workflow
 
-Macro Signals
-→ Liquidity Interpretation
-→ US Equity Regime Classification
-→ Trade Bias
-→ Structure Analysis
-→ Allocation Engine
-→ Execution Timing
-→ Position Management
-→ Risk Analytics
+Macro Environment Filter
+→ Trend / Flow Selection
+→ Dashboard Relative Strength
+→ Pullback Continuation Entry
+→ Position & Risk Management
+→ Analytics
+→ Dashboard Visualization
 
 ---
 
@@ -53,7 +49,7 @@ Macro Signals
 - Automated ETF and macro data download pipeline using Python and yfinance
 - Historical market data storage in structured CSV format
 - Cross-asset monitoring universe integration
-- Structured research data architecture for scalable analytics workflows
+- Structured market-data workflows supporting dashboard visualization and execution research
 
 ## Research Framework
 
@@ -104,33 +100,51 @@ Includes monitoring systems across:
 
 ---
 
+# CTA Core Philosophy
+
+The framework follows a macro-aware CTA-style workflow:
+
+- Identify the strongest tradable trend / flow
+- Confirm continuation conditions
+- Execute staged deployment
+- Protect capital through systematic risk management
+
+The system prioritizes:
+
+- trend continuation
+- pullback refinement
+- staged exposure management
+- risk-adjusted execution
+
+rather than bottom prediction or full-market interpretation.
+
 # System Features
 
-## Macro Regime Engine
+## Macro Environment Filter
 
-- Risk-on / Risk-off classification
-- Volatility monitoring
-- Yield, liquidity, and USD-flow interpretation
-- US equity-centered macro liquidity framework
-- Inflation and commodity pressure analysis
-- Cross-asset confirmation workflows
-- Macro trade-bias generation
+- Provides broad regime and trade-bias context
+- Supports four simplified macro environments:
+  - Panic Risk-off
+  - Inflation Risk-off
+  - Liquidity Tightening
+  - Liquidity Risk-on
+- Does not directly determine the final tradable asset
 
-## Allocation Engine
+## Dashboard & Allocation Layer
 
-- Diversified ETF allocation logic
-- Capital-constrained single-asset selection logic
-- Relative-strength comparison workflows
-- Risk-overlay integration
-- Regime-sensitive allocation adjustments
+- Relative-strength comparison
+- Strongest-asset selection
+- Capital-restriction execution scenarios
+- Dashboard-based deployment preference
+- Commodity / hedge / growth leadership comparison
 
 ## Execution Framework
 
 - Breakout execution logic
 - Pullback execution logic
 - Pullback-quality scoring
-- Execution-quality scoring and staged deployment analysis
-- Options-structure and volatility-overlay integration
+- Execution-condition scoring and staged deployment analysis
+- Options inputs are treated as optional execution confirmation, not as a core regime driver
 - Trade structure confirmation workflows
 - Adaptive execution-condition evaluation
 
@@ -144,17 +158,14 @@ Includes monitoring systems across:
 - Drawdown-control methodologies
 - Volatility-aware exposure management
 
-## Research Validation
+## Analytics & Validation
 
-- Walk-forward testing workflows
-- Out-of-sample validation methodologies
-- Monte Carlo robustness analysis
-- Risk-adjusted performance evaluation
-- Recovery factor analysis
-- Volatility and drawdown analytics
-- Structured performance attribution workflows
-- Parameter sensitivity analysis
-- Research reproducibility and structured analytical outputs
+- Basic backtesting workflows
+- Drawdown and volatility analytics
+- Sharpe-ratio evaluation
+- Recovery-factor monitoring
+- Structured trade logging
+- Ongoing Python research migration
 
 ---
 
@@ -182,36 +193,26 @@ Includes monitoring systems across:
 
 # Current Status
 
-Currently converting institutional-style Excel-based macro allocation and execution systems into scalable Python research infrastructure and Power BI analytical dashboards.
+Currently converting Excel-based macro-aware allocation and execution systems into scalable Python research infrastructure and Power BI analytical dashboards.
 
 Current development priorities include:
 
-- Python signal engine migration
-- Allocation automation
-- Research workflow modularization
-- Backtesting infrastructure
-- Dashboard export architecture
-- Institutional-style analytics visualization
+- Python migration of the CTA-style trend / flow selection engine
+- Pullback continuation-entry logic
+- Position and risk-management logic
+- Dashboard visualization for relative strength and capital-restriction scenarios
+- Basic backtesting and risk analytics
 
 ---
 
-# Research Infrastructure Migration
+# Current migration focuses on:
 
-The following institutional-style research components are currently implemented within the Excel and Google Sheets framework and are being progressively translated into modular Python infrastructure:
-
-- Macro signal engine
-- Allocation engine
-- Execution engine
-- Position-state transition engine
-- Pullback-scoring engine
-- Risk analytics module
-- Monte Carlo simulation workflows
-- Walk-forward optimization workflows
-- Strategy comparison framework
-- Parameter optimization engine
+- Macro environment filtering
 - Dashboard export architecture
-- Power BI institutional dashboard
-- AWS deployment workflows
+- Pullback continuation-entry logic
+- Position-state management
+- Risk-management automation
+- Power BI visualization
 
 ---
 
@@ -220,28 +221,30 @@ The following institutional-style research components are currently implemented 
 ```text
 data/
 scripts/
-signals/
+macro/
 allocation/
 execution/
-analytics/
+risk_management/
 dashboard_export/
+analytics/
 powerbi/
+docs/
 ```
 
-| Folder            | Corresponding Logic                      |
-| ----------------- | ---------------------------------------- |
-| macro/            | Macro Signals                            |
-| regime/           | Regime Classification                    |
-| trade_bias/       | Trade Bias                               |
-| structure/        | Structure Analysis                       |
-| allocation/       | Allocation                               |
-| execution/        | Execution                                |
-| risk_management/  | Risk Management                          |
-| analytics/        | Walk-forward / Monte Carlo / Sharpe / DD |
-| dashboard_export/ | Python → Power BI export                 |
-| powerbi/          | Institutional dashboard                  |
-| data/             | Historical data                          |
-| scripts/          | Utility / pipeline scripts               |
+| Folder            | Corresponding Logic                                               |
+| ----------------- | ----------------------------------------------------------------- |
+| macro/            | Macro environment filtering                                       |
+| execution/        | CTA trend-following and pullback continuation entry               |
+| risk_management/  | Position-state management and staged exposure control             |
+| allocation/       | Dashboard-based strongest-asset and capital-restriction scenarios |
+| dashboard_export/ | Python → Power BI export                                          |
+| analytics/        | Backtesting and risk analytics                                    |
+| powerbi/          | Dashboard visualization                                           |
+| data/             | Historical market data                                            |
+| scripts/          | Utility and data pipeline scripts                                 |
+| docs/             | Architecture and workflow documentation                           |
+
+The framework prioritizes tradable execution quality and risk control over full-market narrative interpretation.
 
 Disclaimer
 

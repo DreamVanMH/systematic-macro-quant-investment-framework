@@ -12,8 +12,10 @@ from config.macro_rules_private import (
 
 def calculate_macro_scores(row: pd.Series) -> dict:
     """
-    Calculate macro scores for one row of macro daily returns.
-    Score weights are loaded from private macro rule config.
+    Calculate macro environment scores for one row of macro data.
+
+    The macro layer acts as an environment filter only.
+    It does not directly determine the final tradable asset.
     """
 
     scores = {
@@ -26,18 +28,24 @@ def calculate_macro_scores(row: pd.Series) -> dict:
 
     def apply_score(score_dict: dict):
         for score_name, value in score_dict.items():
-            scores[score_name] += value
+            if score_name in scores:
+                scores[score_name] += value
 
     # VIX level rule
     vix_level = row.get("VIX", 0)
 
     if vix_level < VIX_RISK_ON_LEVEL:
-        scores["risk_on_score"] += 1
+        apply_score(MACRO_SCORE_RULES.get("VIX", {}).get("low", {}))
     elif vix_level > VIX_PANIC_LEVEL:
-        scores["risk_off_score"] += 1
+        apply_score(MACRO_SCORE_RULES.get("VIX", {}).get("high", {}))
+    else:
+        apply_score(MACRO_SCORE_RULES.get("VIX", {}).get("mid", {}))
 
     # Cross-asset score rules
     for indicator, rule in MACRO_SCORE_RULES.items():
+        if indicator == "VIX":
+            continue
+
         value = row.get(indicator, 0)
 
         if value > 0:
@@ -50,7 +58,13 @@ def calculate_macro_scores(row: pd.Series) -> dict:
 
 def classify_regime(vix_level: float, scores: dict) -> str:
     """
-    Classify macro regime using private regime parameters.
+    Classify macro regime using the same logic as the Excel Macro_Flow sheet.
+
+    Priority:
+    1. Panic Risk-off
+    2. Inflation Risk-off
+    3. Liquidity Risk-on
+    4. Liquidity Tightening
     """
 
     risk_on = scores["risk_on_score"]
@@ -59,41 +73,43 @@ def classify_regime(vix_level: float, scores: dict) -> str:
     rate_pressure = scores["rate_pressure_score"]
     usd_liquidity = scores["usd_liquidity_score"]
 
-    inflation_buffer = REGIME_RULES["inflation_buffer"]
-    macro_pressure_buffer = REGIME_RULES["macro_pressure_buffer"]
-    risk_on_buffer = REGIME_RULES["risk_on_buffer"]
-    supported_risk_on_threshold = REGIME_RULES["supported_risk_on_threshold"]
-
-    if (
-        vix_level > VIX_PANIC_LEVEL
-        and risk_off >= max(risk_on, inflation, rate_pressure, usd_liquidity)
-    ):
+    # 1. Panic Risk-off
+    if vix_level > VIX_PANIC_LEVEL and (risk_on <= 0 or usd_liquidity <= 0):
         return REGIME_NAMES["panic_risk_off"]
 
-    if inflation >= max(risk_on, risk_off, rate_pressure, usd_liquidity) + inflation_buffer:
-        return REGIME_NAMES["inflation_pressure"]
-
+    # 2. Inflation Risk-off
     if (
-        risk_off >= max(risk_on, inflation, rate_pressure, usd_liquidity) + macro_pressure_buffer
-        and vix_level <= VIX_PANIC_LEVEL
+        (inflation > 0 and risk_off > 0)
+        or (inflation > 0 and rate_pressure > 0)
+        or (risk_off > 0 and rate_pressure > 0)
     ):
-        return REGIME_NAMES["macro_pressure"]
+        return REGIME_NAMES["inflation_risk_off"]
 
-    if risk_on >= max(risk_off, inflation, rate_pressure, usd_liquidity) + risk_on_buffer:
+    # 3. Liquidity Risk-on
+    if (
+        (risk_on > 0 and usd_liquidity > 0)
+        or (
+            vix_level < VIX_RISK_ON_LEVEL
+            and risk_off <= 0
+            and inflation <= 0
+            and rate_pressure <= 0
+        )
+    ):
         return REGIME_NAMES["liquidity_risk_on"]
 
-    if risk_on >= supported_risk_on_threshold:
-        return REGIME_NAMES["supported_risk_on"]
-
-    return REGIME_NAMES["mixed"]
+    # 4. Default
+    return REGIME_NAMES["liquidity_tightening"]
 
 
 def get_trade_bias(regime: str) -> str:
     """
-    Map macro regime to trade bias using private mapping.
+    Map macro regime to broad trade bias.
+
+    Final tradable asset selection should still be handled by
+    dashboard relative strength and allocation logic.
     """
 
     return TRADE_BIAS_MAP.get(
         regime,
-        TRADE_BIAS_MAP[REGIME_NAMES["mixed"]]
+        TRADE_BIAS_MAP[REGIME_NAMES["liquidity_tightening"]],
     )
