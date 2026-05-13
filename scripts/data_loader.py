@@ -1,12 +1,13 @@
 import yfinance as yf
 import pandas as pd
-import os
+from pathlib import Path
 
 tickers = [
 
     # Growth
     "QQQ",
     "TQQQ",
+    "NQ=F",
 
     # AI-Core
     "SOXL",
@@ -52,10 +53,10 @@ tickers = [
     "CAD=X"
 ]
 
-output_folder = "../data"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+output_folder = PROJECT_ROOT / "data"
 
-if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
+output_folder.mkdir(exist_ok=True)
 
 for ticker in tickers:
 
@@ -67,9 +68,16 @@ for ticker in tickers:
         auto_adjust=True
     )
 
-    filename = ticker.replace("^", "") + ".csv"
+    filename_map = {
+    "^VIX": "VIX",
+    "^TNX": "TNX",
+    "NQ=F": "NQ1",
+    }
 
-    df.to_csv(f"{output_folder}/{filename}")
+    output_name = filename_map.get(ticker, ticker.replace("^", ""))
+    filename = output_name + ".csv"
+
+    df.to_csv(output_folder / filename)
 
     print(f"Saved: {filename}")
 

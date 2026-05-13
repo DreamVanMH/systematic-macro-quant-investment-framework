@@ -1,9 +1,15 @@
 import pandas as pd
 
+from scripts.regime_engine import (
+    calculate_macro_scores,
+    classify_regime,
+    get_trade_bias,
+)
+
 
 def get_latest_close(market_data, ticker):
     """
-    Get the latest closing price for one ticker.
+    Get latest closing price for one ticker.
     """
 
     if ticker not in market_data:
@@ -14,14 +20,12 @@ def get_latest_close(market_data, ticker):
     if df.empty:
         return None
 
-    latest_close = df["Close"].iloc[-1]
-
-    return latest_close
+    return float(df["Close"].iloc[-1])
 
 
 def get_daily_change_pct(market_data, ticker):
     """
-    Calculate latest daily percentage change for one ticker.
+    Calculate latest daily percentage change.
     """
 
     if ticker not in market_data:
@@ -35,45 +39,80 @@ def get_daily_change_pct(market_data, ticker):
     latest_close = float(df["Close"].iloc[-1])
     previous_close = float(df["Close"].iloc[-2])
 
-    daily_change_pct = ((latest_close - previous_close) / previous_close) * 100
-
-    return daily_change_pct
+    return ((latest_close - previous_close) / previous_close) * 100
 
 
 def generate_macro_snapshot(market_data):
     """
-    Generate a simple macro monitoring snapshot.
+    Generate macro environment filter snapshot.
+
+    This layer provides:
+    - macro environment filtering
+    - regime classification
+    - broad trade bias
+
+    It does NOT determine the final tradable asset.
     """
 
     macro_universe = {
         "VIX": "VIX",
+        "DXY": "UUP",
         "TNX": "TNX",
-        "DXY Proxy": "UUP",
-        "USDCAD": "CAD=X",
-        "USDCNY": "USDCNY=X",
-        "BTC": "BTC-USD",
-        "GLD": "GLD",
-        "DBC": "DBC",
-        "BNO": "BNO",
+        "US02Y": "US02Y",
+        "NQ1": "NQ1",
         "QQQ": "QQQ",
-        "TQQQ": "TQQQ",
-        "SQQQ": "SQQQ"
+        "BNO": "BNO",
+        "DBC": "DBC",
+        "GLD": "GLD",
+        "USDCNY": "USDCNY=X",
+        "USDCAD": "CAD=X",
+        "BTC": "BTC-USD",
+        "SHY": "SHY",
     }
 
-    snapshot = []
+    snapshot_rows = []
+
+    score_input = {}
 
     for indicator, ticker in macro_universe.items():
 
         latest_close = get_latest_close(market_data, ticker)
         daily_change_pct = get_daily_change_pct(market_data, ticker)
 
-        snapshot.append({
+        if indicator == "VIX":
+            score_input[indicator] = latest_close or 0
+        else:
+            score_input[indicator] = daily_change_pct or 0
+
+        snapshot_rows.append({
             "Indicator": indicator,
             "Ticker": ticker,
             "Latest Close": latest_close,
-            "Daily Change %": daily_change_pct
+            "Daily Change %": daily_change_pct,
         })
 
-    snapshot_df = pd.DataFrame(snapshot)
+    snapshot_df = pd.DataFrame(snapshot_rows)
 
-    return snapshot_df
+    score_series = pd.Series(score_input)
+
+    scores = calculate_macro_scores(score_series)
+
+    regime = classify_regime(
+        vix_level=score_input.get("VIX", 0),
+        scores=scores,
+    )
+
+    trade_bias = get_trade_bias(regime)
+
+    summary_df = pd.DataFrame([
+        {
+            "Macro Regime": regime,
+            "Trade Bias": trade_bias,
+            **scores,
+        }
+    ])
+
+    return {
+        "snapshot": snapshot_df,
+        "summary": summary_df,
+    }
