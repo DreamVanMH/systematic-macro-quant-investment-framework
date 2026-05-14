@@ -58,7 +58,7 @@ def calculate_macro_scores(row: pd.Series) -> dict:
 
 def classify_regime(vix_level: float, scores: dict) -> str:
     """
-    Classify macro regime using the same logic as the Excel Macro_Flow sheet.
+    Classify macro regime using cumulative score dominance.
 
     Priority:
     1. Panic Risk-off
@@ -70,30 +70,28 @@ def classify_regime(vix_level: float, scores: dict) -> str:
     risk_on = scores["risk_on_score"]
     risk_off = scores["risk_off_score"]
     inflation = scores["inflation_score"]
-    rate_pressure = scores["rate_pressure_score"]
-    usd_liquidity = scores["usd_liquidity_score"]
+
+    inflation_buffer = REGIME_RULES["inflation_dominance_buffer"]
+    risk_on_buffer = REGIME_RULES["risk_on_dominance_buffer"]
 
     # 1. Panic Risk-off
-    if vix_level > VIX_PANIC_LEVEL and (risk_on <= 0 or usd_liquidity <= 0):
+    # VIX panic must be confirmed by risk-off dominance.
+    if vix_level > VIX_PANIC_LEVEL and risk_off >= risk_on:
         return REGIME_NAMES["panic_risk_off"]
 
     # 2. Inflation Risk-off
+    # Inflation must be dominant, not merely positive.
     if (
-        (inflation > 0 and risk_off > 0)
-        or (inflation > 0 and rate_pressure > 0)
-        or (risk_off > 0 and rate_pressure > 0)
+        inflation >= risk_on + inflation_buffer
+        and inflation >= risk_off + inflation_buffer
     ):
         return REGIME_NAMES["inflation_risk_off"]
 
     # 3. Liquidity Risk-on
+    # Risk-on must clearly dominate both risk-off and inflation pressure.
     if (
-        (risk_on > 0 and usd_liquidity > 0)
-        or (
-            vix_level < VIX_RISK_ON_LEVEL
-            and risk_off <= 0
-            and inflation <= 0
-            and rate_pressure <= 0
-        )
+        risk_on >= risk_off + risk_on_buffer
+        and risk_on >= inflation + risk_on_buffer
     ):
         return REGIME_NAMES["liquidity_risk_on"]
 

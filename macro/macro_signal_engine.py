@@ -60,7 +60,6 @@ def generate_macro_snapshot(market_data):
         "TNX": "TNX",
         "US02Y": "US02Y",
         "NQ1": "NQ1",
-        "QQQ": "QQQ",
         "BNO": "BNO",
         "DBC": "DBC",
         "GLD": "GLD",
