@@ -18,6 +18,7 @@ from dashboard.market_structure import (
     build_market_structure_rows,
     run_market_structure,
 )
+from dashboard.dashboard_suggestion_engine import generate_dashboard_suggestion
 
 def get_latest_vix_level(market_data):
     """
@@ -45,16 +46,28 @@ def print_snapshot(snapshot, missing_count=0):
     print("Market Structure Snapshot")
     print("==============================")
 
-    print(f"\nMarket Structure: {snapshot.get('market_structure')}")
+    market_structure = snapshot.get("market_structure")
+    group_summary = snapshot.get("group_summary", {})
     vix_level = snapshot.get("vix_level")
 
+    dashboard_suggestion = generate_dashboard_suggestion(
+        market_structure=market_structure,
+        group_summary=group_summary,
+        macro_trade_bias=None,
+        selected_asset=None,
+    )
+
+    print(f"\nMarket Structure    : {market_structure}")
+
     if vix_level is not None:
-        print(f"VIX Level       : {vix_level:.2f}")
+        print(f"VIX Level           : {vix_level:.2f}")
     else:
-        print("VIX Level       : N/A")
+        print("VIX Level           : N/A")
+
+    print(f"Dashboard Suggestion: {dashboard_suggestion}")
 
     print("\nGroup Summary:")
-    for group, summary in snapshot.get("group_summary", {}).items():
+    for group, summary in group_summary.items():
         print(
             f"- {group}: "
             f"Green={summary.get('green_count')}, "
