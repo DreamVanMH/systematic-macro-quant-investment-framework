@@ -25,7 +25,10 @@ def get_latest_close(market_data, ticker):
 
 def get_daily_change_pct(market_data, ticker):
     """
-    Calculate latest daily percentage change.
+    Get latest daily percentage change.
+
+    Prefer pre-calculated change_pct from the standardized data layer.
+    If change_pct is not available, fall back to Close-based calculation.
     """
 
     if ticker not in market_data:
@@ -33,11 +36,23 @@ def get_daily_change_pct(market_data, ticker):
 
     df = market_data[ticker]
 
+    if df.empty:
+        return None
+
+    if "change_pct" in df.columns:
+        latest_change = df["change_pct"].iloc[-1]
+
+        if pd.notna(latest_change):
+            return float(latest_change)
+
     if len(df) < 2:
         return None
 
     latest_close = float(df["Close"].iloc[-1])
     previous_close = float(df["Close"].iloc[-2])
+
+    if previous_close == 0:
+        return None
 
     return ((latest_close - previous_close) / previous_close) * 100
 
