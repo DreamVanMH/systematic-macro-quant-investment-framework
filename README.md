@@ -1,251 +1,368 @@
 # Systematic Macro Quant Investment Framework
 
-Macro-aware ETF trend-following and risk-management research framework focused on tradable signal
-generation, pullback-based execution refinement, staged position management, and dashboard visualization.
+A macro-aware ETF and selected-equity allocation, execution-monitoring, and risk-management research framework.
 
+This project converts a spreadsheet-based investment decision-support workflow into a Python, CSV, and Power BI research infrastructure. The current Python MVP covers macro regime monitoring, market-structure classification, allocation scoring, latest-snapshot export, allocation-history export, and Power BI dashboard visualization.
+
+The framework is designed as a research and portfolio-demonstration project, not as a fully automated trading system.
+
+---
+
+## Core Workflow
+
+```text
 Macro Environment Filter
-→ Trend / Flow Selection
-→ Dashboard Relative Strength
-→ Pullback Continuation Entry
+→ Market Structure Classification
+→ Allocation Scoring
+→ Execution Monitoring
 → Position & Risk Management
-→ Analytics
+→ Analytics / Validation
 → Dashboard Visualization
+```
+
+The framework focuses on:
+
+- Macro-aware ETF allocation
+- Selected-equity execution monitoring
+- Market-structure interpretation
+- Relative-strength comparison
+- Pullback and continuation signal review
+- Staged exposure management
+- Risk and drawdown control
+- Power BI dashboard reporting
+
+The system is primarily designed around US equity, growth, commodity, defensive, and risk-off structures rather than traditional global macro forecasting.
+
+Macro signals are used as broad environment filters. They do not directly predict the market or automatically determine final trades.
 
 ---
 
-# Project Overview
+## Project Positioning
 
-The framework focuses on tradable ETF trend-following, pullback refinement, and risk-management workflows using macro-aware market filters and dashboard-based relative-strength monitoring.
+This repository demonstrates the public research and analytics layer of a broader macro-aware investment framework.
 
-- Quantitative research
-- ETF allocation analysis
-- Execution timing analysis
-- Risk management
-- Performance analytics
-- Power BI visualization
-- AWS-supported research infrastructure
+The completed public-facing MVP includes:
 
-The framework combines macro-aware market filters, relative-strength monitoring, pullback refinement, and staged risk-management workflows into a tradable ETF execution framework.
-The framework is primarily designed around US equity and growth-asset interpretation rather than traditional global macro forecasting. Macro signals are interpreted through liquidity, rates, USD flows, volatility, and growth leadership dynamics to support ETF allocation and execution decisions.
+- Python-based macro regime monitoring
+- Market-structure classification
+- Allocation score generation
+- Latest allocation snapshot export
+- Allocation history export
+- Power BI dashboard visualization
+- Public-safe architecture documentation
 
----
+Operational spreadsheet modules are used separately for live decision-support, including option-timing review, pullback-signal evaluation, continuation confirmation, and staged risk-management workflows.
 
-# Core Investment Workflow
-
-Macro Environment Filter
-→ Trend / Flow Selection
-→ Dashboard Relative Strength
-→ Pullback Continuation Entry
-→ Position & Risk Management
-→ Analytics
-→ Dashboard Visualization
+Sensitive trading parameters, live trade decisions, private thresholds, and discretionary execution details are not included in this public repository.
 
 ---
 
-# Current Development
+## Current Development Status
 
-## Data Layer
+### Completed MVP
 
-- Automated ETF and macro data download pipeline using Python and yfinance
-- Historical market data storage in structured CSV format
-- Cross-asset monitoring universe integration
-- Structured market-data workflows supporting dashboard visualization and execution research
+The current Python MVP has completed the following components:
 
-## Research Framework
+- Macro regime monitoring
+- Market-structure classification
+- Allocation scoring
+- Latest allocation snapshot CSV export
+- Allocation history CSV export
+- Power BI latest allocation dashboard
+- Power BI allocation history monitor
+- Public-safe project architecture documentation
 
-Includes monitoring systems across:
+The current Power BI dashboard includes:
 
-### Growth
-
-- QQQ
-- TQQQ
-
-### AI-Core
-
-- SOXL
-- SOXX
-- SMH
-
-### Risk-off
-
-- SQQQ
-- TLT
-- UUP
-- VIX
-
-### Commodity & Inflation
-
-- BNO
-- GLD
-- DBC
-- USO
-
-### AI-Broad & Infrastructure
-
-- XLK
-- XLI
-- IGV
-- EQIX
-- DLR
-- PAVE
-
-### Mega-Cap Technology
-
-- AAPL
-- MSFT
-- AMZN
-- GOOGL
-- META
-- TSLA
+- Latest allocation view
+- Macro regime context
+- Market-structure context
+- Volatility context
+- Risk-gate display
+- Allocation history monitor
 
 ---
 
-# CTA Core Philosophy
+### In Progress
 
-The framework follows a macro-aware CTA-style workflow:
+Current development work focuses on expanding the Python research layer and improving the portfolio-ready documentation.
 
-- Identify the strongest tradable trend / flow
-- Confirm continuation conditions
-- Execute staged deployment
-- Protect capital through systematic risk management
+In-progress modules include:
 
-The system prioritizes:
+- Python migration of execution-signal logic
+- Pullback and continuation-entry logic integration
+- Position-state tracking
+- Staged risk-management logic
+- Trade logging and risk-performance analytics
+- Power BI documentation and presentation-ready screenshots
+- Public README and architecture alignment with resume positioning
 
-- trend continuation
-- pullback refinement
-- staged exposure management
-- risk-adjusted execution
+---
 
-rather than bottom prediction or full-market interpretation.
+### Planned Extensions
 
-# System Features
+Future development may include:
 
-## Macro Environment Filter
+- Automated option and execution-data ingestion
+- Historical backtesting
+- Walk-forward validation
+- Out-of-sample testing
+- Monte Carlo robustness analysis
+- Expanded risk-adjusted performance analytics
+- AWS-supported scalable research workflows
+- Broker API or live automation review only after validation
 
-- Provides broad regime and trade-bias context
-- Supports four simplified macro environments:
-  - Panic Risk-off
-  - Inflation Risk-off
-  - Liquidity Tightening
-  - Liquidity Risk-on
-- Does not directly determine the final tradable asset
+These planned extensions are not presented as completed functionality.
 
-## Dashboard & Allocation Layer
+---
+
+## System Features
+
+### 1. Macro Environment Filter
+
+The macro layer provides broad investment context using cross-asset indicators.
+
+It supports simplified macro regime interpretation, including:
+
+- Panic risk-off
+- Inflation risk-off
+- Liquidity tightening
+- Liquidity risk-on
+
+The macro layer is used as an environment filter, not as a standalone trading signal.
+
+---
+
+### 2. Market Structure Classification
+
+The market-structure layer evaluates whether current market leadership is concentrated in growth, defensive, commodity, hedge, or mixed structures.
+
+This layer supports:
 
 - Relative-strength comparison
-- Strongest-asset selection
-- Capital-restriction execution scenarios
-- Dashboard-based deployment preference
-- Commodity / hedge / growth leadership comparison
+- Leadership monitoring
+- Risk-on / risk-off structure interpretation
+- Growth versus hedge or commodity comparison
+- Dashboard-level market context
 
-## Execution Framework
-
-- Breakout execution logic
-- Pullback execution logic
-- Pullback-quality scoring
-- Execution-condition scoring and staged deployment analysis
-- Options inputs are treated as optional execution confirmation, not as a core regime driver
-- Trade structure confirmation workflows
-- Adaptive execution-condition evaluation
-
-## Position Management
-
-- Staged exposure management
-- Incremental scaling workflows
-- Breakeven conversion logic
-- Early-protection overlays
-- Adaptive trailing frameworks
-- Drawdown-control methodologies
-- Volatility-aware exposure management
-
-## Analytics & Validation
-
-- Basic backtesting workflows
-- Drawdown and volatility analytics
-- Sharpe-ratio evaluation
-- Recovery-factor monitoring
-- Structured trade logging
-- Ongoing Python research migration
+The purpose is to understand tradable structure before allocation or execution decisions are reviewed.
 
 ---
 
-# Technology Stack
+### 3. Allocation Scoring
 
-## Programming & Analytics
+The allocation layer converts macro and market-structure context into category-level allocation preferences.
+
+It supports:
+
+- Category score calculation
+- Eligible score adjustment
+- Strongest-category monitoring
+- Capital-restriction decision scenarios
+- Latest allocation snapshot generation
+- Allocation history tracking
+
+The allocation output is exported to CSV and visualized in Power BI.
+
+---
+
+### 4. Execution Monitoring
+
+The execution-monitoring layer is designed to support trade review rather than fully automated order placement.
+
+It includes logic for:
+
+- Pullback review
+- Continuation confirmation
+- Breakout versus pullback entry distinction
+- Execution-condition evaluation
+- Staged deployment review
+
+Current live execution-support workflows remain spreadsheet-based and discretionary. Python integration is ongoing.
+
+---
+
+### 5. Position and Risk Management
+
+The risk-management layer focuses on staged exposure control and capital protection.
+
+It is designed to support:
+
+- Position-state monitoring
+- Incremental exposure management
+- Breakeven transition logic
+- Early-protection review
+- Trailing-risk framework design
+- Drawdown-control methodology
+- Volatility-aware exposure review
+
+This layer is being migrated from spreadsheet logic into Python modules.
+
+---
+
+### 6. Analytics and Validation
+
+The analytics layer is designed to evaluate strategy behavior, risk-adjusted performance, and robustness.
+
+Current and planned analytics include:
+
+- Trade logging
+- Return analysis
+- Volatility analysis
+- Sharpe ratio
+- Maximum drawdown
+- Recovery factor
+- Basic backtesting workflows
+- Walk-forward validation planning
+- Monte Carlo robustness planning
+
+Historical backtesting, walk-forward validation, and Monte Carlo robustness analysis are planned extensions and should not be interpreted as fully completed production validation.
+
+---
+
+### 7. Power BI Visualization
+
+The Power BI layer converts exported Python outputs into dashboard views.
+
+Current dashboard pages include:
+
+- Latest macro allocation dashboard
+- Allocation history monitor
+
+The dashboard is designed for:
+
+- Portfolio presentation
+- Investment research discussion
+- Interview demonstration
+- System workflow explanation
+
+The Power BI `.pbix` file is kept local and is not committed to the public repository by default, because it may contain local file paths, sample outputs, and internal model metadata.
+
+---
+
+## Technology Stack
+
+### Programming and Data
 
 - Python
 - pandas
 - NumPy
 - SQL
+- CSV-based data exchange
 
-## Visualization
+### Visualization
 
 - Power BI
 - Excel
 - Google Sheets
 
-## Infrastructure
+### Infrastructure and Workflow
 
-- AWS EC2
 - GitHub
+- AWS EC2
+- Linux command line
 
 ---
 
-# Current Status
-
-Currently converting Excel-based macro-aware allocation and execution systems into scalable Python research infrastructure and Power BI analytical dashboards.
-
-Current development priorities include:
-
-- Python migration of the CTA-style trend / flow selection engine
-- Pullback continuation-entry logic
-- Position and risk-management logic
-- Dashboard visualization for relative strength and capital-restriction scenarios
-- Basic backtesting and risk analytics
-
----
-
-# Current migration focuses on:
-
-- Macro environment filtering
-- Dashboard export architecture
-- Pullback continuation-entry logic
-- Position-state management
-- Risk-management automation
-- Power BI visualization
-
----
-
-# Repository Structure
+## Repository Structure
 
 ```text
 data/
 scripts/
 macro/
+dashboard/
 allocation/
 execution/
 risk_management/
-dashboard_export/
 analytics/
+dashboard_export/
 powerbi/
 docs/
 ```
 
-| Folder            | Corresponding Logic                                               |
-| ----------------- | ----------------------------------------------------------------- |
-| macro/            | Macro environment filtering                                       |
-| execution/        | CTA trend-following and pullback continuation entry               |
-| risk_management/  | Position-state management and staged exposure control             |
-| allocation/       | Dashboard-based strongest-asset and capital-restriction scenarios |
-| dashboard_export/ | Python → Power BI export                                          |
-| analytics/        | Backtesting and risk analytics                                    |
-| powerbi/          | Dashboard visualization                                           |
-| data/             | Historical market data                                            |
-| scripts/          | Utility and data pipeline scripts                                 |
-| docs/             | Architecture and workflow documentation                           |
+| Folder              | Purpose                                                    |
+| ------------------- | ---------------------------------------------------------- |
+| `data/`             | Historical market and macro data storage                   |
+| `scripts/`          | Utility scripts and pipeline runners                       |
+| `macro/`            | Macro regime monitoring and environment filtering          |
+| `dashboard/`        | Market-structure and relative-strength monitoring          |
+| `allocation/`       | Allocation score and category preference logic             |
+| `execution/`        | Pullback, continuation, and execution-monitoring workflows |
+| `risk_management/`  | Position-state and staged exposure-control logic           |
+| `analytics/`        | Backtesting, trade logging, and risk analytics             |
+| `dashboard_export/` | Python-to-Power BI CSV export layer                        |
+| `powerbi/`          | Power BI dashboard documentation and local dashboard files |
+| `docs/`             | Architecture, workflow, and project documentation          |
 
-The framework prioritizes tradable execution quality and risk control over full-market narrative interpretation.
+---
 
-Disclaimer
+## Public / Private Boundary
 
-This repository is for research, educational, and demonstration purposes only and does not constitute investment advice.
+This public repository is designed to demonstrate the research architecture, data workflow, and analytics approach.
+
+The following items are intentionally excluded from the public repository:
+
+- Private trading parameters
+- Live position details
+- Real-time execution decisions
+- Sensitive option-timing rules
+- Broker API credentials
+- Full discretionary trade review notes
+- Private backtesting output files
+- Local Power BI `.pbix` files unless separately reviewed
+
+The goal is to present the system architecture and research workflow without exposing sensitive trading logic.
+
+---
+
+## Research Philosophy
+
+The framework prioritizes tradable execution quality and risk control over full-market narrative prediction.
+
+It focuses on:
+
+- Identifying tradable market structure
+- Monitoring macro environment risk
+- Comparing relative strength across asset categories
+- Reviewing execution quality before deployment
+- Managing exposure through staged risk controls
+- Building research outputs that can be visualized and explained
+
+The system is not designed to predict exact market tops or bottoms.
+
+It is designed to support disciplined decision-making under changing macro and market-structure conditions.
+
+---
+
+## Portfolio Use
+
+This project can be used as a portfolio demonstration for roles related to:
+
+- Quantitative investment research
+- Financial data analysis
+- Portfolio analytics
+- ETF strategy research
+- Systematic investment research
+- Power BI dashboard development
+- Python-based financial analytics
+
+The project demonstrates the ability to connect:
+
+```text
+Investment logic
+→ Data pipeline
+→ Python research modules
+→ CSV export
+→ Power BI dashboard
+→ Portfolio-ready explanation
+```
+
+---
+
+## Disclaimer
+
+This repository is for research, educational, and demonstration purposes only.
+
+It does not constitute investment advice, financial advice, or a recommendation to buy or sell any security.
+
+The framework is not a production trading system and should not be used for live trading without independent validation, risk review, and compliance consideration.
