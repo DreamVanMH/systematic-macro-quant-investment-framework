@@ -12,4 +12,6 @@ tests/
 
 dashboard_export/output/
 
+powerbi/*.pbix
+
 
