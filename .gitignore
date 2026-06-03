@@ -14,4 +14,8 @@ dashboard_export/output/
 
 powerbi/*.pbix
 
+scripts/local/
+
+.env
+
 
