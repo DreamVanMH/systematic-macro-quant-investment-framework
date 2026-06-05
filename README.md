@@ -71,6 +71,8 @@ The current Python MVP has completed the following components:
 - Power BI latest allocation dashboard
 - Power BI allocation history monitor
 - Public-safe project architecture documentation
+- Public-safe position risk-management engine
+- Close-price-based risk-management replay engine
 
 The current Power BI dashboard includes:
 
@@ -196,7 +198,17 @@ It is designed to support:
 - Drawdown-control methodology
 - Volatility-aware exposure review
 
-This layer is being migrated from spreadsheet logic into Python modules.
+This layer has been partially migrated from spreadsheet logic into Python modules.
+
+The current public Python implementation includes:
+
+- A public-safe position risk-management engine
+- Generic position tiers using LOW / MID / HIGH / NONE
+- Staged add, reduce, breakeven-stop, trailing-stop, and exit actions
+- A close-price-based risk-management replay engine
+- Replay output for stage, action, trailing status, peak price, drawdown, and effective stop price
+
+The replay engine is designed to validate staged risk-management behavior after a given entry. It is not yet a full trade-entry backtesting engine and does not include option-timing signals, pullback scoring, continuation-entry signals, or intraday stop simulation.
 
 ---
 
@@ -212,11 +224,12 @@ Current and planned analytics include:
 - Sharpe ratio
 - Maximum drawdown
 - Recovery factor
-- Basic backtesting workflows
+- Close-price-based risk-management replay
+- Basic backtesting workflow planning
 - Walk-forward validation planning
 - Monte Carlo robustness planning
 
-Historical backtesting, walk-forward validation, and Monte Carlo robustness analysis are planned extensions and should not be interpreted as fully completed production validation.
+The current replay engine validates staged risk-management behavior using historical close prices. Full historical backtesting, intraday stop simulation, walk-forward validation, and Monte Carlo robustness analysis are planned extensions and should not be interpreted as completed production validation.
 
 ---
 
