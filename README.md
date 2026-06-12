@@ -73,6 +73,7 @@ The current Python MVP has completed the following components:
 - Public-safe project architecture documentation
 - Public-safe position risk-management engine
 - Close-price-based risk-management replay engine
+- OHLC-based risk-management replay with daily intraday stop-touch detection
 
 The current Power BI dashboard includes:
 
@@ -206,9 +207,18 @@ The current public Python implementation includes:
 - Generic position tiers using LOW / MID / HIGH / NONE
 - Staged add, reduce, breakeven-stop, trailing-stop, and exit actions
 - A close-price-based risk-management replay engine
+- An OHLC-based risk-management replay engine
 - Replay output for stage, action, trailing status, peak price, drawdown, and effective stop price
+- Daily OHLC stop-touch detection using the effective stop level
+- OHLC warning output when daily high/low sequence is ambiguous
 
-The replay engine is designed to validate staged risk-management behavior after a given entry. It is not yet a full trade-entry backtesting engine and does not include option-timing signals, pullback scoring, continuation-entry signals, or intraday stop simulation.
+The replay engines are designed to validate staged risk-management behavior after a predefined entry. They are not full trade-entry backtesting engines and do not include option-timing signals, pullback scoring, continuation-entry signals, broker execution logic, or minute-level intraday stop simulation.
+
+The OHLC replay layer uses daily Open, High, Low, and Close data to check whether the effective stop level was touched during the day. Because daily OHLC data does not show whether the high or low occurred first, sequence-ambiguous rows may be marked with:
+
+````text
+daily_ohlc_sequence_unknown
+This OHLC replay layer is an intermediate validation layer between close-only replay and future minute-level replay.
 
 ---
 
@@ -225,11 +235,14 @@ Current and planned analytics include:
 - Maximum drawdown
 - Recovery factor
 - Close-price-based risk-management replay
+- OHLC-based risk-management replay with daily stop-touch detection
 - Basic backtesting workflow planning
 - Walk-forward validation planning
 - Monte Carlo robustness planning
 
-The current replay engine validates staged risk-management behavior using historical close prices. Full historical backtesting, intraday stop simulation, walk-forward validation, and Monte Carlo robustness analysis are planned extensions and should not be interpreted as completed production validation.
+The current replay engines validate staged risk-management behavior using historical close prices and daily OHLC data. The OHLC layer can detect whether an effective stop level was touched within a daily price bar, but it cannot determine the exact intraday sequence of high and low prices.
+
+Full trade-entry backtesting, minute-level intraday stop simulation, walk-forward validation, and Monte Carlo robustness analysis are planned extensions and should not be interpreted as completed production validation.
 
 ---
 
@@ -291,7 +304,7 @@ analytics/
 dashboard_export/
 powerbi/
 docs/
-```
+````
 
 | Folder              | Purpose                                                    |
 | ------------------- | ---------------------------------------------------------- |

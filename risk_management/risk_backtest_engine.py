@@ -1,65 +1,45 @@
 """
-Public-safe risk-management backtest / replay engine.
+Risk-management replay engine.
 
-This module replays historical price data through position_risk_engine.py.
+This module provides two replay layers:
 
-Purpose:
-- Feed historical prices into the existing position risk engine.
-- Track daily position stage, risk action, peak price, trailing status,
-  stop level, add trigger, and drawdown.
-- Provide a foundation for later daily OHLC and minute-level backtesting.
+1. Close-only replay
+   - Uses Date + Close
+   - Validates staged position-risk behavior after a given entry
+
+2. OHLC replay
+   - Uses Date + Open + High + Low + Close
+   - Adds intraday stop-touch detection using daily Low
+   - Supports standard OHLC CSV and yfinance multi-header CSV
 
 Important boundary:
-- This is NOT a full strategy backtest yet.
-- It does not generate entry signals.
-- It does not ingest private option-timing rules.
-- It does not execute real trades.
-- It only replays risk-management logic after a given entry.
+This is not a full strategy backtest.
+It does not generate entry signals, option timing signals, or intraday execution order.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
-
-import pandas as pd
+import csv
+import inspect
+from typing import Any
 
 from risk_management.position_risk_engine import (
     PositionInput,
     PositionTier,
-    RiskAction,
     evaluate_position_risk,
 )
-from risk_management.risk_rule_loader import TradeRule
 
 
-@dataclass(frozen=True)
+# ---------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------
+
+
+@dataclass
 class RiskBacktestConfig:
     """
-    Configuration for one risk-management replay.
-
-    asset:
-        Ticker or asset name.
-
-    entry_date:
-        First date from which the replay should start.
-        The price dataframe must contain this date or later dates.
-
-    entry_price:
-        Actual entry price used for return, stop, breakeven,
-        profit threshold, and trailing calculations.
-
-    initial_position_tier:
-        Starting generic position tier: LOW, MID, or HIGH.
-
-    anchor_price:
-        Optional anchor price for add-step logic.
-        If None, entry_price will be used.
-
-    entry_type:
-        Optional label such as pullback, breakout, continuation.
-        Current risk engine accepts this field but does not expose
-        private signal logic.
+    Configuration for replaying risk-management behavior after entry.
     """
 
     asset: str
@@ -67,301 +47,727 @@ class RiskBacktestConfig:
     entry_price: float
     initial_position_tier: PositionTier
     anchor_price: float | None = None
-    entry_type: str = ""
+    entry_type: str = "pullback"
 
 
-def _normalize_position_tier(position_tier: PositionTier | str) -> PositionTier:
+# ---------------------------------------------------------------------
+# Generic helpers
+# ---------------------------------------------------------------------
+
+
+def _enum_name(value: Any) -> str | None:
     """
-    Convert string or PositionTier into PositionTier enum.
+    Safely return enum name if value is Enum-like.
+    Otherwise return string value.
     """
-    if isinstance(position_tier, PositionTier):
-        return position_tier
 
-    text = str(position_tier).strip().upper()
+    if value is None:
+        return None
 
-    try:
-        return PositionTier[text]
-    except KeyError as exc:
-        valid_values = ", ".join(tier.name for tier in PositionTier)
-        raise ValueError(
-            f"Invalid position tier: {position_tier}. "
-            f"Valid values are: {valid_values}"
-        ) from exc
+    return getattr(value, "name", str(value))
 
 
-def _prepare_price_data(
-    price_data: pd.DataFrame,
-    entry_date: str,
-) -> pd.DataFrame:
+def _get_attr(obj: Any, names: list[str], default: Any = None) -> Any:
     """
-    Prepare price dataframe for risk replay.
+    Safely read the first existing attribute from an object.
 
-    Required columns:
-        Date
-        Close
-
-    The dataframe is filtered to dates >= entry_date and sorted ascending.
+    This makes the replay engine more tolerant when RiskOutput field names
+    differ slightly across development versions.
     """
-    required_columns = {"Date", "Close"}
-    missing_columns = required_columns - set(price_data.columns)
 
-    if missing_columns:
-        raise ValueError(
-            f"Price data is missing required columns: {sorted(missing_columns)}"
-        )
+    for name in names:
+        if hasattr(obj, name):
+            return getattr(obj, name)
 
-    df = price_data.copy()
-
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
-
-    df = df.dropna(subset=["Date", "Close"])
-    df = df.sort_values("Date").reset_index(drop=True)
-
-    start_date = pd.to_datetime(entry_date)
-    df = df[df["Date"] >= start_date].reset_index(drop=True)
-
-    if df.empty:
-        raise ValueError(
-            "No price rows found on or after entry_date. "
-            f"entry_date={entry_date}"
-        )
-
-    return df
+    return default
 
 
-def _enum_value(value: object) -> object:
+def _build_position_input(**kwargs) -> PositionInput:
     """
-    Convert enum values to strings for dataframe output.
+    Build PositionInput while only passing supported fields.
+
+    This prevents errors when PositionInput does not support fields such as:
+    trailing_started.
     """
-    if hasattr(value, "value"):
-        return value.value
 
-    return value
+    signature = inspect.signature(PositionInput)
+    allowed_keys = set(signature.parameters.keys())
 
-
-def _should_stop_replay(action: RiskAction) -> bool:
-    """
-    Decide whether replay should stop after a risk action.
-
-    For the first version:
-    - STOP_OUT
-    - STOP_OUT_BE
-    - EXIT_ALL
-
-    stop the replay.
-
-    REDUCE_TO_MID and REDUCE_TO_LOW do not stop the replay.
-    They update the position tier and continue.
-    """
-    return action in {
-        RiskAction.STOP_OUT,
-        RiskAction.STOP_OUT_BE,
-        RiskAction.EXIT_ALL,
+    filtered_kwargs = {
+        key: value
+        for key, value in kwargs.items()
+        if key in allowed_keys
     }
 
+    return PositionInput(**filtered_kwargs)
 
-def _update_position_tier_after_action(
-    current_tier: PositionTier,
-    action: RiskAction,
-) -> PositionTier:
-    """
-    Update generic position tier after add / reduce / exit action.
 
-    This remains public-safe because it only uses generic tiers.
-    It does not expose real position percentages.
+def _classify_intraday_stop_type(result: Any) -> str | None:
     """
-    if action == RiskAction.ADD_TO_MID:
+    Classify stop type for OHLC replay interpretation.
+
+    This helper does not replace position_risk_engine logic.
+    It only labels the stop level.
+    """
+
+    trailing_stop_price = _get_attr(result, ["trailing_stop_price"], None)
+    active_stop_price = _get_attr(result, ["active_stop_price"], None)
+    stage = _get_attr(result, ["stage"], None)
+    stage_name = _enum_name(stage)
+
+    if trailing_stop_price is not None:
+        return "trailing_stop"
+
+    if active_stop_price is not None:
+        if stage_name in {"ADD_BE", "FULL_BE"}:
+            return "breakeven_stop"
+        return "active_stop"
+
+    return None
+
+
+def _update_tier_from_action(current_tier: PositionTier, risk_action: Any) -> PositionTier:
+    """
+    Update position tier based on risk action when RiskOutput does not
+    return position_tier directly.
+    """
+
+    action_name = _enum_name(risk_action)
+
+    if action_name == "ADD_TO_MID":
         return PositionTier.MID
 
-    if action == RiskAction.ADD_TO_HIGH:
+    if action_name == "ADD_TO_HIGH":
         return PositionTier.HIGH
 
-    if action == RiskAction.REDUCE_TO_MID:
+    if action_name == "REDUCE_TO_MID":
         return PositionTier.MID
 
-    if action == RiskAction.REDUCE_TO_LOW:
+    if action_name == "REDUCE_TO_LOW":
         return PositionTier.LOW
 
-    if action in {
-        RiskAction.STOP_OUT,
-        RiskAction.STOP_OUT_BE,
-        RiskAction.EXIT_ALL,
-    }:
+    if action_name in {"EXIT_ALL", "STOP_OUT", "STOP_OUT_BE"}:
         return PositionTier.NONE
 
     return current_tier
 
 
+def _get_effective_stop_price(result: Any) -> float | None:
+    """
+    Read effective stop if available.
+    Otherwise reconstruct from trailing_stop_price / active_stop_price.
+    """
+
+    effective_stop_price = _get_attr(result, ["effective_stop_price"], None)
+
+    if effective_stop_price is not None:
+        return effective_stop_price
+
+    trailing_stop_price = _get_attr(result, ["trailing_stop_price"], None)
+    active_stop_price = _get_attr(result, ["active_stop_price"], None)
+
+    if trailing_stop_price is not None:
+        return trailing_stop_price
+
+    return active_stop_price
+
+
+def _get_updated_peak_price(result: Any, fallback_peak: float) -> float:
+    """
+    Safely read updated peak price.
+    """
+
+    updated_peak_price = _get_attr(result, ["updated_peak_price", "peak_price"], None)
+
+    if updated_peak_price is None:
+        return fallback_peak
+
+    return float(updated_peak_price)
+
+
+def _to_float_or_none(value: Any) -> float | None:
+    """
+    Convert numeric value safely.
+    """
+
+    if value is None:
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# ---------------------------------------------------------------------
+# Close-only replay
+# ---------------------------------------------------------------------
+
+
 def run_risk_replay(
-    price_data: pd.DataFrame,
-    rule: TradeRule,
+    price_rows: list[dict],
     config: RiskBacktestConfig,
-) -> pd.DataFrame:
+    trade_rule,
+) -> list[dict]:
     """
-    Replay risk-management logic over historical daily close data.
+    Run close-price-based risk-management replay.
 
-    Parameters
-    ----------
-    price_data:
-        DataFrame with columns:
-            Date
-            Close
+    Expected price_rows columns:
+    - Date
+    - Close
 
-    rule:
-        TradeRule loaded from private config/trade_rules_config.csv.
-
-    config:
-        RiskBacktestConfig for one asset and one entry.
-
-    Returns
-    -------
-    pd.DataFrame
-        One row per replay date.
-
-    Notes
-    -----
-    This first version uses Close price only.
-    Later versions can add:
-        Open
-        High
-        Low
-        intraday stop trigger
-        minute-level Polygon data
+    This preserves the original close-only replay behavior:
+    - use Close as current price
+    - update peak using Close
+    - run evaluate_position_risk()
+    - update tier from result or action
     """
-    df = _prepare_price_data(
-        price_data=price_data,
-        entry_date=config.entry_date,
-    )
 
-    current_tier = _normalize_position_tier(config.initial_position_tier)
-    anchor_price = config.anchor_price or config.entry_price
-    peak_price: float | None = None
+    replay_rows: list[dict] = []
 
-    rows: list[dict[str, object]] = []
+    current_tier = config.initial_position_tier
+    peak_price = config.entry_price
+    trailing_started = False
 
-    for _, row in df.iterrows():
-        current_date = row["Date"]
-        current_price = float(row["Close"])
+    anchor_price = config.anchor_price
+    if anchor_price is None:
+        anchor_price = config.entry_price
 
-        position = PositionInput(
+    for row in price_rows:
+        date = row["Date"]
+        close_price = float(row["Close"])
+
+        updated_peak_price = max(peak_price, close_price)
+
+        position_input = _build_position_input(
             asset=config.asset,
-            position_tier=current_tier,
+            current_price=close_price,
             entry_price=config.entry_price,
             anchor_price=anchor_price,
-            current_price=current_price,
-            peak_price=peak_price,
+            position_tier=current_tier,
+            peak_price=updated_peak_price,
             entry_type=config.entry_type,
+            trailing_started=trailing_started,
         )
 
         result = evaluate_position_risk(
-            position=position,
-            rule=rule,
+            position=position_input,
+            rule=trade_rule,
         )
 
-        rows.append(
+        risk_action = _get_attr(result, ["risk_action", "action"], None)
+        stage = _get_attr(result, ["stage"], None)
+        result_position_tier = _get_attr(result, ["position_tier"], None)
+
+        output_tier = (
+            result_position_tier
+            if result_position_tier is not None
+            else current_tier
+        )
+
+        effective_stop_price = _get_effective_stop_price(result)
+        output_peak_price = _get_updated_peak_price(result, updated_peak_price)
+
+        replay_rows.append(
             {
-                "date": current_date.date().isoformat(),
-                "asset": result.asset,
-                "close": current_price,
+                "date": date,
+                "asset": config.asset,
+                "close": close_price,
                 "entry_price": config.entry_price,
                 "anchor_price": anchor_price,
-                "position_tier": current_tier.value,
-                "stage": _enum_value(result.stage),
-                "risk_action": _enum_value(result.action),
-                "trailing_started": result.trailing_started,
-                "return_pct": result.return_pct,
-                "peak_drawdown_pct": result.peak_drawdown_pct,
-                "active_stop_price": result.active_stop_price,
-                "trailing_stop_price": result.trailing_stop_price,
-                "effective_stop_price": (
-                    result.trailing_stop_price
-                    if result.trailing_stop_price is not None
-                    else result.active_stop_price
+                "position_tier": _enum_name(output_tier),
+                "stage": _enum_name(stage),
+                "risk_action": _enum_name(risk_action),
+                "trailing_started": _get_attr(
+                    result,
+                    ["trailing_started"],
+                    trailing_started,
                 ),
-                "profit_threshold_price": result.profit_threshold_price,                                            
-                "next_add_trigger_price": result.next_add_trigger_price,
-                "updated_peak_price": result.updated_peak_price,
+                "return_pct": _get_attr(result, ["return_pct"], None),
+                "peak_drawdown_pct": _get_attr(result, ["peak_drawdown_pct"], None),
+                "active_stop_price": _get_attr(result, ["active_stop_price"], None),
+                "trailing_stop_price": _get_attr(result, ["trailing_stop_price"], None),
+                "effective_stop_price": effective_stop_price,
+                "profit_threshold_price": _get_attr(result, ["profit_threshold_price"], None),
+                "next_add_trigger_price": _get_attr(result, ["next_add_trigger_price"], None),
+                "updated_peak_price": output_peak_price,
             }
         )
 
-        peak_price = result.updated_peak_price
+        if result_position_tier is not None:
+            current_tier = result_position_tier
+        else:
+            current_tier = _update_tier_from_action(current_tier, risk_action)
 
-        current_tier = _update_position_tier_after_action(
-            current_tier=current_tier,
-            action=result.action,
-        )
+        peak_price = output_peak_price
+        trailing_started = _get_attr(result, ["trailing_started"], trailing_started)
 
-        if _should_stop_replay(result.action):
+        if current_tier == PositionTier.NONE:
             break
 
-    return pd.DataFrame(rows)
+    return replay_rows
 
 
 def run_risk_replay_from_csv(
-    price_csv_path: str,
-    rule: TradeRule,
+    csv_path: str,
     config: RiskBacktestConfig,
-) -> pd.DataFrame:
+    trade_rule,
+) -> list[dict]:
     """
-    Load historical price data from CSV and run risk replay.
+    Load close-only price CSV and run close-only replay.
 
-    CSV must contain:
-        Date
-        Close
+    Supported columns:
+    - Date / date / Datetime / datetime / Timestamp / timestamp / Unnamed: 0
+    - Close
     """
-    price_data = pd.read_csv(price_csv_path)
+
+    price_rows: list[dict] = []
+
+    possible_date_columns = [
+        "Date",
+        "date",
+        "Datetime",
+        "datetime",
+        "Timestamp",
+        "timestamp",
+        "Unnamed: 0",
+    ]
+
+    with open(csv_path, mode="r", newline="", encoding="utf-8-sig") as file:
+        reader = csv.DictReader(file)
+
+        if reader.fieldnames is None:
+            raise ValueError(f"CSV file has no header: {csv_path}")
+
+        fieldnames = set(reader.fieldnames)
+
+        if "Close" not in fieldnames:
+            raise ValueError(
+                "Close-only replay requires Close column. "
+                f"Available columns: {reader.fieldnames}"
+            )
+
+        date_column = None
+        for candidate in possible_date_columns:
+            if candidate in fieldnames:
+                date_column = candidate
+                break
+
+        if date_column is None:
+            raise ValueError(
+                "Close-only replay requires a date column. "
+                f"Accepted date columns: {possible_date_columns}. "
+                f"Available columns: {reader.fieldnames}"
+            )
+
+        for row in reader:
+            price_rows.append(
+                {
+                    "Date": row[date_column],
+                    "Close": float(row["Close"]),
+                }
+            )
 
     return run_risk_replay(
-        price_data=price_data,
-        rule=rule,
+        price_rows=price_rows,
         config=config,
+        trade_rule=trade_rule,
     )
 
 
-def format_replay_output(
-    replay_df: pd.DataFrame,
-) -> pd.DataFrame:
+def format_replay_output(replay_rows: list[dict]) -> list[dict]:
     """
-    Create a human-readable copy of replay output.
-
-    Calculation columns remain decimals in the raw replay result.
-    This formatter converts percentage fields into percent-style strings
-    for local inspection only.
+    Format close-only replay rows for CSV export or terminal review.
     """
-    df = replay_df.copy()
 
-    percent_columns: Iterable[str] = [
-        "return_pct",
-        "peak_drawdown_pct",
+    formatted_rows: list[dict] = []
+
+    for row in replay_rows:
+        formatted_rows.append(
+            {
+                "date": row.get("date"),
+                "asset": row.get("asset"),
+                "close": row.get("close"),
+                "entry_price": row.get("entry_price"),
+                "anchor_price": row.get("anchor_price"),
+                "position_tier": row.get("position_tier"),
+                "stage": row.get("stage"),
+                "risk_action": row.get("risk_action"),
+                "trailing_started": row.get("trailing_started"),
+                "return_pct": row.get("return_pct"),
+                "peak_drawdown_pct": row.get("peak_drawdown_pct"),
+                "active_stop_price": row.get("active_stop_price"),
+                "trailing_stop_price": row.get("trailing_stop_price"),
+                "effective_stop_price": row.get("effective_stop_price"),
+                "profit_threshold_price": row.get("profit_threshold_price"),
+                "next_add_trigger_price": row.get("next_add_trigger_price"),
+                "updated_peak_price": row.get("updated_peak_price"),
+            }
+        )
+
+    return formatted_rows
+
+
+# ---------------------------------------------------------------------
+# OHLC replay
+# ---------------------------------------------------------------------
+
+
+def run_risk_replay_ohlc(
+    price_rows: list[dict],
+    config: RiskBacktestConfig,
+    trade_rule,
+) -> list[dict]:
+    """
+    Run OHLC-based risk-management replay.
+
+    Expected price_rows columns:
+    - Date
+    - Open
+    - High
+    - Low
+    - Close
+
+    Boundary:
+    - This is not a full intraday backtest.
+    - OHLC cannot know whether high or low happened first.
+    - If Low touches effective stop, this function stops replay
+      conservatively after that row.
+
+    Important:
+    - Replay starts from config.entry_date.
+    """
+
+    replay_rows: list[dict] = []
+
+    current_tier = config.initial_position_tier
+    peak_price = config.entry_price
+    trailing_started = False
+
+    anchor_price = config.anchor_price
+    if anchor_price is None:
+        anchor_price = config.entry_price
+
+    # Only replay rows on or after entry_date.
+    filtered_price_rows = [
+        row for row in price_rows
+        if str(row["Date"]) >= str(config.entry_date)
     ]
 
-    for column in percent_columns:
-        if column in df.columns:
-            df[column] = df[column].apply(
-                lambda value: ""
-                if pd.isna(value)
-                else f"{value:.2%}"
+    if not filtered_price_rows:
+        raise ValueError(
+            f"No price rows found on or after entry_date={config.entry_date}"
+        )
+
+    for row in filtered_price_rows:
+        date = row["Date"]
+
+        open_price = float(row["Open"])
+        high_price = float(row["High"])
+        low_price = float(row["Low"])
+        close_price = float(row["Close"])
+
+        # OHLC replay uses daily high to update peak.
+        # This is more realistic than close-only replay,
+        # but sequence remains unknown at daily resolution.
+        updated_peak_price = max(peak_price, high_price)
+
+        position_input = _build_position_input(
+            asset=config.asset,
+            current_price=close_price,
+            entry_price=config.entry_price,
+            anchor_price=anchor_price,
+            position_tier=current_tier,
+            peak_price=updated_peak_price,
+            entry_type=config.entry_type,
+            trailing_started=trailing_started,
+        )
+
+        result = evaluate_position_risk(
+            position=position_input,
+            rule=trade_rule,
+        )
+
+        risk_action = _get_attr(result, ["risk_action", "action"], None)
+        stage = _get_attr(result, ["stage"], None)
+        result_position_tier = _get_attr(result, ["position_tier"], None)
+
+        output_tier = (
+            result_position_tier
+            if result_position_tier is not None
+            else current_tier
+        )
+
+        effective_stop_price = _get_effective_stop_price(result)
+        profit_threshold_price = _get_attr(result, ["profit_threshold_price"], None)
+        output_peak_price = _get_updated_peak_price(result, updated_peak_price)
+
+        intraday_stop_touched = False
+        intraday_exit_price = None
+        intraday_stop_type = None
+        ohlc_warning = None
+
+        is_entry_date = str(date) == str(config.entry_date)
+
+        if (
+            not is_entry_date
+            and effective_stop_price is not None
+            and low_price <= float(effective_stop_price)
+        ):
+            intraday_stop_touched = True
+            intraday_exit_price = effective_stop_price
+            intraday_stop_type = _classify_intraday_stop_type(result)
+
+        if (
+            not is_entry_date
+            and profit_threshold_price is not None
+            and high_price >= float(profit_threshold_price)
+            and effective_stop_price is not None
+            and low_price <= float(effective_stop_price)
+        ):
+            ohlc_warning = "daily_ohlc_sequence_unknown"
+
+        replay_rows.append(
+            {
+                "date": date,
+                "asset": config.asset,
+                "open": open_price,
+                "high": high_price,
+                "low": low_price,
+                "close": close_price,
+                "entry_price": config.entry_price,
+                "anchor_price": anchor_price,
+                "position_tier": _enum_name(output_tier),
+                "stage": _enum_name(stage),
+                "risk_action": _enum_name(risk_action),
+                "trailing_started": _get_attr(
+                    result,
+                    ["trailing_started"],
+                    trailing_started,
+                ),
+                "return_pct": _get_attr(result, ["return_pct"], None),
+                "peak_drawdown_pct": _get_attr(result, ["peak_drawdown_pct"], None),
+                "active_stop_price": _get_attr(result, ["active_stop_price"], None),
+                "trailing_stop_price": _get_attr(result, ["trailing_stop_price"], None),
+                "effective_stop_price": effective_stop_price,
+                "profit_threshold_price": profit_threshold_price,
+                "next_add_trigger_price": _get_attr(result, ["next_add_trigger_price"], None),
+                "updated_peak_price": output_peak_price,
+                "intraday_stop_touched": intraday_stop_touched,
+                "intraday_exit_price": intraday_exit_price,
+                "intraday_stop_type": intraday_stop_type,
+                "ohlc_warning": ohlc_warning,
+            }
+        )
+
+        if result_position_tier is not None:
+            current_tier = result_position_tier
+        else:
+            current_tier = _update_tier_from_action(current_tier, risk_action)
+
+        peak_price = output_peak_price
+        trailing_started = _get_attr(result, ["trailing_started"], trailing_started)
+
+        # Conservative OHLC assumption:
+        # if daily low touches effective stop, stop the replay.
+        if intraday_stop_touched:
+            break
+
+        if current_tier == PositionTier.NONE:
+            break
+
+    return replay_rows
+
+
+def run_risk_replay_ohlc_from_csv(
+    csv_path: str,
+    config: RiskBacktestConfig,
+    trade_rule,
+) -> list[dict]:
+    """
+    Load OHLC historical prices from CSV and run OHLC replay.
+
+    Supported formats:
+
+    1. Standard OHLC CSV:
+       Date,Open,High,Low,Close
+
+    2. yfinance multi-header CSV:
+       Price,Close,High,Low,Open,Volume
+       Ticker,SOXL,SOXL,SOXL,SOXL,SOXL
+       Date,,,,,
+       2015-01-02,...
+    """
+
+    price_rows: list[dict] = []
+
+    with open(csv_path, mode="r", newline="", encoding="utf-8-sig") as file:
+        raw_rows = list(csv.reader(file))
+
+    if not raw_rows:
+        raise ValueError(f"CSV file is empty: {csv_path}")
+
+    first_row = raw_rows[0]
+
+    # ------------------------------------------------------------
+    # Case 1: yfinance multi-header format
+    # ------------------------------------------------------------
+    if first_row and first_row[0] == "Price":
+        header = first_row
+
+        required_columns = {"Close", "High", "Low", "Open"}
+        missing_columns = required_columns - set(header)
+
+        if missing_columns:
+            raise ValueError(
+                "OHLC replay requires yfinance columns: "
+                f"{sorted(required_columns)}. "
+                f"Missing columns: {sorted(missing_columns)}. "
+                f"Available columns: {header}"
             )
 
-    price_columns: Iterable[str] = [
-        "close",
-        "entry_price",
-        "anchor_price",
-        "active_stop_price",
-        "trailing_stop_price",
-        "effective_stop_price",
-        "profit_threshold_price",
-        "next_add_trigger_price",
-        "updated_peak_price",
+        close_idx = header.index("Close")
+        high_idx = header.index("High")
+        low_idx = header.index("Low")
+        open_idx = header.index("Open")
+
+        # yfinance rows:
+        # row 0 = Price header
+        # row 1 = Ticker row
+        # row 2 = Date row
+        # row 3+ = actual price data
+        for row in raw_rows[3:]:
+            if not row or not row[0]:
+                continue
+
+            try:
+                price_rows.append(
+                    {
+                        "Date": row[0],
+                        "Open": float(row[open_idx]),
+                        "High": float(row[high_idx]),
+                        "Low": float(row[low_idx]),
+                        "Close": float(row[close_idx]),
+                    }
+                )
+            except (ValueError, IndexError) as exc:
+                raise ValueError(
+                    f"Invalid OHLC row in {csv_path}: {row}"
+                ) from exc
+
+        return run_risk_replay_ohlc(
+            price_rows=price_rows,
+            config=config,
+            trade_rule=trade_rule,
+        )
+
+    # ------------------------------------------------------------
+    # Case 2: standard CSV format
+    # ------------------------------------------------------------
+    required_price_columns = {"Open", "High", "Low", "Close"}
+    possible_date_columns = [
+        "Date",
+        "date",
+        "Datetime",
+        "datetime",
+        "Timestamp",
+        "timestamp",
+        "Unnamed: 0",
     ]
 
-    for column in price_columns:
-        if column in df.columns:
-            df[column] = df[column].apply(
-                lambda value: ""
-                if pd.isna(value)
-                else f"{value:.2f}"
-            )
+    header = first_row
+    fieldnames = set(header)
 
-    return df
+    missing_price_columns = required_price_columns - fieldnames
+
+    if missing_price_columns:
+        raise ValueError(
+            "OHLC replay requires price columns: "
+            f"{sorted(required_price_columns)}. "
+            f"Missing columns: {sorted(missing_price_columns)}. "
+            f"Available columns: {header}"
+        )
+
+    date_column = None
+    for candidate in possible_date_columns:
+        if candidate in fieldnames:
+            date_column = candidate
+            break
+
+    if date_column is None:
+        raise ValueError(
+            "OHLC replay requires a date column. "
+            f"Accepted date columns: {possible_date_columns}. "
+            f"Available columns: {header}"
+        )
+
+    date_idx = header.index(date_column)
+    open_idx = header.index("Open")
+    high_idx = header.index("High")
+    low_idx = header.index("Low")
+    close_idx = header.index("Close")
+
+    for row in raw_rows[1:]:
+        if not row or not row[date_idx]:
+            continue
+
+        try:
+            price_rows.append(
+                {
+                    "Date": row[date_idx],
+                    "Open": float(row[open_idx]),
+                    "High": float(row[high_idx]),
+                    "Low": float(row[low_idx]),
+                    "Close": float(row[close_idx]),
+                }
+            )
+        except (ValueError, IndexError) as exc:
+            raise ValueError(
+                f"Invalid OHLC row in {csv_path}: {row}"
+            ) from exc
+
+    return run_risk_replay_ohlc(
+        price_rows=price_rows,
+        config=config,
+        trade_rule=trade_rule,
+    )
+
+
+def format_ohlc_replay_output(replay_rows: list[dict]) -> list[dict]:
+    """
+    Format OHLC replay rows for CSV export or terminal review.
+    """
+
+    formatted_rows: list[dict] = []
+
+    for row in replay_rows:
+        formatted_rows.append(
+            {
+                "date": row.get("date"),
+                "asset": row.get("asset"),
+                "open": row.get("open"),
+                "high": row.get("high"),
+                "low": row.get("low"),
+                "close": row.get("close"),
+                "entry_price": row.get("entry_price"),
+                "anchor_price": row.get("anchor_price"),
+                "position_tier": row.get("position_tier"),
+                "stage": row.get("stage"),
+                "risk_action": row.get("risk_action"),
+                "trailing_started": row.get("trailing_started"),
+                "return_pct": row.get("return_pct"),
+                "peak_drawdown_pct": row.get("peak_drawdown_pct"),
+                "active_stop_price": row.get("active_stop_price"),
+                "trailing_stop_price": row.get("trailing_stop_price"),
+                "effective_stop_price": row.get("effective_stop_price"),
+                "profit_threshold_price": row.get("profit_threshold_price"),
+                "next_add_trigger_price": row.get("next_add_trigger_price"),
+                "updated_peak_price": row.get("updated_peak_price"),
+                "intraday_stop_touched": row.get("intraday_stop_touched"),
+                "intraday_exit_price": row.get("intraday_exit_price"),
+                "intraday_stop_type": row.get("intraday_stop_type"),
+                "ohlc_warning": row.get("ohlc_warning"),
+            }
+        )
+
+    return formatted_rows
