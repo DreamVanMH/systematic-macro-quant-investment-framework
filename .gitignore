@@ -1,5 +1,9 @@
 data/*.csv
 processed_data/*.csv
+ohlc_data/*.csv
+ohlc_data_backup_before_batch_fix/
+ohlc_data_bad_files_after_batch_fix.csv
+
 __pycache__/
 .ipynb_checkpoints/
 .env
@@ -18,4 +22,5 @@ scripts/local/
 
 .env
 
+*_backup_before_ohlc_fix.csv
 

@@ -216,12 +216,10 @@ The replay engines are designed to validate staged risk-management behavior afte
 
 The OHLC replay layer uses daily Open, High, Low, and Close data to check whether the effective stop level was touched during the day. Because daily OHLC data does not show whether the high or low occurred first, sequence-ambiguous rows may be marked with:
 
-````text
+```text
 daily_ohlc_sequence_unknown
-
-````
-
 This OHLC replay layer is an intermediate validation layer between close-only replay and future minute-level replay.
+```
 
 ---
 
@@ -307,7 +305,7 @@ analytics/
 dashboard_export/
 powerbi/
 docs/
-````
+```
 
 | Folder              | Purpose                                                    |
 | ------------------- | ---------------------------------------------------------- |

@@ -258,6 +258,11 @@ def run_risk_replay(
         risk_action = _get_attr(result, ["risk_action", "action"], None)
         stage = _get_attr(result, ["stage"], None)
         result_position_tier = _get_attr(result, ["position_tier"], None)
+        # Close-entry replay rule:
+        # On the entry date, the position is assumed to be opened at the close.
+        # Therefore, do not allow same-day close-based stop-out actions.
+        if is_entry_date:
+            risk_action = "HOLD"
 
         output_tier = (
             result_position_tier
@@ -466,6 +471,7 @@ def run_risk_replay_ohlc(
         high_price = float(row["High"])
         low_price = float(row["Low"])
         close_price = float(row["Close"])
+        is_entry_date = str(date) == str(config.entry_date)
 
         # OHLC replay uses daily high to update peak.
         # This is more realistic than close-only replay,
@@ -491,6 +497,15 @@ def run_risk_replay_ohlc(
         risk_action = _get_attr(result, ["risk_action", "action"], None)
         stage = _get_attr(result, ["stage"], None)
         result_position_tier = _get_attr(result, ["position_tier"], None)
+        # Close-entry replay rule for OHLC replay:
+        # On the entry date, the position is assumed to be opened at the close.
+        # Therefore, do not allow same-day close-based stop-out actions.
+        risk_action_name = getattr(risk_action, "value", risk_action)
+
+        if is_entry_date and str(risk_action_name).startswith("STOP_OUT"):
+            risk_action = "HOLD"
+            result_position_tier = current_tier
+
 
         output_tier = (
             result_position_tier
@@ -506,8 +521,6 @@ def run_risk_replay_ohlc(
         intraday_exit_price = None
         intraday_stop_type = None
         ohlc_warning = None
-
-        is_entry_date = str(date) == str(config.entry_date)
 
         if (
             not is_entry_date
