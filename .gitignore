@@ -24,3 +24,7 @@ scripts/local/
 
 *_backup_before_ohlc_fix.csv
 
+# Runtime logs
+logs/
+task_scheduler_debug.log
+
