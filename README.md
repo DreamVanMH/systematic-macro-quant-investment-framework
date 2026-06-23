@@ -323,6 +323,190 @@ docs/
 
 ---
 
+## Daily Market Data Pipeline Automation
+
+This project includes a scheduled daily pipeline used to refresh market data, rebuild processed data, generate macro snapshots, and export allocation dashboard files.
+
+### Pipeline Steps
+
+The daily pipeline runs the following scripts in order:
+
+```bash
+python scripts/data_loader.py
+python scripts/download_fred_data.py
+python scripts/load_all_data.py
+python scripts/run_macro_snapshot.py
+python dashboard_export/export_allocation_snapshot.py
+```
+
+These steps perform the following workflow:
+
+1. Download or update market data.
+2. Download or update FRED macro data.
+3. Rebuild standardized processed data.
+4. Generate the macro environment snapshot.
+5. Export the latest allocation snapshot and allocation history for dashboard use.
+
+### Unified Runner
+
+Instead of running each script manually, use the unified daily pipeline runner:
+
+```bash
+python scripts/run_daily_pipeline.py
+```
+
+For manual testing, especially on weekends or outside the normal weekday guard, use:
+
+```bash
+python scripts/run_daily_pipeline.py --force
+```
+
+### Output Files
+
+The allocation export step writes dashboard-ready CSV files to:
+
+```text
+dashboard_export/output/allocation_snapshot.csv
+dashboard_export/output/allocation_snapshot_history.csv
+```
+
+The daily pipeline writes runtime logs to:
+
+```text
+logs/daily_pipeline_YYYY-MM-DD.log
+```
+
+Example:
+
+```text
+logs/daily_pipeline_2026-06-23.log
+```
+
+Runtime logs are not tracked by Git.
+
+### Windows Task Scheduler Setup
+
+The pipeline is scheduled through Windows Task Scheduler using:
+
+```text
+run_daily_pipeline.bat
+```
+
+The scheduled task name is:
+
+```text
+Daily Market Pipeline
+```
+
+The task is configured with five daily triggers:
+
+```text
+7:30 AM
+10:30 AM
+11:30 AM
+12:30 PM
+1:30 PM
+```
+
+This schedule allows the system to refresh snapshots during the trading day and after the market close.
+
+### Recommended Task Scheduler Settings
+
+Recommended settings:
+
+```text
+Allow task to be run on demand
+Run task as soon as possible after a scheduled start is missed
+If the task fails, restart every 5 minutes, up to 3 times
+If the task is already running, do not start a new instance
+```
+
+Recommended conditions:
+
+```text
+Do not require the computer to be idle
+Do not require AC power
+Do not require a specific network connection
+```
+
+### Windows BAT Runner
+
+The Windows runner uses a fixed project path and Python executable path for stability under Task Scheduler.
+
+Example:
+
+```bat
+@echo off
+cd /d "C:\Users\yingl\Documents\New folder\OneDrive\systematic-macro-quant-investment-framework"
+
+echo ================================ >> task_scheduler_debug.log
+echo Task started at %date% %time% >> task_scheduler_debug.log
+echo Current directory: %cd% >> task_scheduler_debug.log
+where python >> task_scheduler_debug.log 2>&1
+
+"C:\Program Files\Python313\python.exe" scripts\run_daily_pipeline.py >> task_scheduler_debug.log 2>&1
+
+echo Task finished at %date% %time% >> task_scheduler_debug.log
+echo ================================ >> task_scheduler_debug.log
+```
+
+The debug log is used to verify that Task Scheduler correctly calls the BAT file and Python pipeline.
+
+### Git Ignore Rules
+
+Runtime logs should not be committed.
+
+The following entries should be included in `.gitignore`:
+
+```gitignore
+# Runtime logs
+logs/
+task_scheduler_debug.log
+```
+
+### Validation
+
+A successful run should end with:
+
+```text
+Daily pipeline completed successfully.
+```
+
+The expected final output includes:
+
+```text
+dashboard_export/output/allocation_snapshot.csv
+dashboard_export/output/allocation_snapshot_history.csv
+```
+
+The Task Scheduler manual run has been validated successfully. The pipeline was confirmed to run through the full chain:
+
+```text
+Windows Task Scheduler
+→ run_daily_pipeline.bat
+→ scripts/run_daily_pipeline.py
+→ data_loader
+→ download_fred_data
+→ load_all_data
+→ run_macro_snapshot
+→ export_allocation_snapshot
+```
+
+### Notes
+
+If the project is moved to another computer or folder, update the project path in `run_daily_pipeline.bat`.
+
+If Python is upgraded or reinstalled, update the Python executable path in `run_daily_pipeline.bat`.
+
+Current example paths:
+
+```bat
+cd /d "C:\Users\yingl\Documents\New folder\OneDrive\systematic-macro-quant-investment-framework"
+"C:\Program Files\Python313\python.exe" scripts\run_daily_pipeline.py
+```
+
+The main risk is that Task Scheduler may show a successful task status while the actual pipeline output is not refreshed because of a path or Python environment issue. For this reason, `task_scheduler_debug.log` should be kept during the first few days of scheduled runs.
+
 ## Public / Private Boundary
 
 This public repository is designed to demonstrate the research architecture, data workflow, and analytics approach.
